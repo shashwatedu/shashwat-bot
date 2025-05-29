@@ -31,7 +31,7 @@ def reply_all(message):
     if message.text == "📚 PDF Resources":
         bot.send_message(message.chat.id,
             "📥 Direct Download Links:\n\n"
-            "🔹 UP Board Class 6 to 12 Book:https://boardexam.netlify.app/up_board/up_board_all_page\n"
+            "🔹 UP Board Class 6 to 12 Book and paper :https://boardexam.netlify.app/up_board/up_board_all_page\n"
             "🔹 CBSE Class 6 to 12 Notes: https://boardexam.netlify.app/cbsc_bord/cbsc_board_all_page\n"
             "🔹 All IMPORTANT PAGE: https://boardexam.netlify.app/all-link-site\n"
             "🔹 Graduation COURSE : https://boardexam.netlify.app/graduation/graduation\n"
