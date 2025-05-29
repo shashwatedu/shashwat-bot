@@ -1,66 +1,215 @@
 import telebot
 from telebot import types
+import logging
 
-# BotFather से मिला हुआ API Token डालें
-API_KEY = '8179484671:AAGF2Wr4FVmmpIK9R3ejdXSum1Asdom_mLA'  # <-- यहाँ अपना BotFather वाला API token डालें
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Bot token (in a real application, store this securely)
+API_KEY = '8179484671:AAGF2Wr4FVmmpIK9R3ejdXSum1Asdom_mLA'
 bot = telebot.TeleBot(API_KEY)
 
-# /start command
-@bot.message_handler(commands=['start'])
-def start_msg(message):
-    bot.send_message(message.chat.id, 
-        "🙏 नमस्ते! मैं Shashwat का Educational Bot हूँ।\n"
-        "आपको यहाँ मिलेगा:\n📘 Books, 📄 Notes, 📑 Papers, 🧪 Test, 🗣️ English Speaking, और बहुत कुछ!\n\n"
-        "⬇ नीचे Menu से अपना विकल्प चुनें या Commands इस्तेमाल करें।"
-    )
-    main_menu(message)
+# Resource URLs (organized for easy maintenance)
+RESOURCES = {
+    "pdf": {
+        "UP Board": "https://boardexam.netlify.app/up_board/up_board_all_page",
+        "CBSE Notes": "https://boardexam.netlify.app/cbsc_bord/cbsc_board_all_page",
+        "Important Pages": "https://boardexam.netlify.app/all-link-site",
+        "Graduation": "https://boardexam.netlify.app/graduation/graduation"
+    },
+    "tests": {
+        "JEE MCQ": "https://boardexam.netlify.app/jee&neet/jee_test",
+        "NEET Quiz": "https://boardexam.netlify.app/jee&neet/neet_test",
+        "ITI Practice": "https://boardexam.netlify.app/iti/iti_page",
+        "Merchant Navy": "https://boardexam.netlify.app/marchant_navi/navi.all%20topic.html"
+    },
+    "english": {
+        "Grammar Guide": "https://boardexam.netlify.app/english_speacking.html/english-main",
+        "Speaking Practice": "https://boardexam.netlify.app/english_speacking.html/english-main",
+        "PDF Course": "https://boardexam.netlify.app/english_speacking.html/english-main"
+    },
+    "website": "https://boardexam.netlify.app/"
+}
 
-# Menu with buttons
-def main_menu(message):
+# Helper function to create keyboard markup
+def create_menu_keyboard():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    b1 = types.KeyboardButton("📚 PDF Resources")
-    b2 = types.KeyboardButton("🧪 Test & Quiz")
-    b3 = types.KeyboardButton("🗣️ English Speaking")
-    b4 = types.KeyboardButton("🌐 Visit Website")
-    markup.add(b1, b2, b3, b4)
-    bot.send_message(message.chat.id, "👇 Menu से चुनें:", reply_markup=markup)
+    buttons = [
+        types.KeyboardButton("📚 PDF Resources"),
+        types.KeyboardButton("🧪 Tests & Quizzes"),
+        types.KeyboardButton("🗣️ English Speaking"),
+        types.KeyboardButton("🌐 Visit Website"),
+        types.KeyboardButton("ℹ️ About Bot"),
+        types.KeyboardButton("🆘 Help")
+    ]
+    markup.add(*buttons)
+    return markup
 
-# Button responses
+# Start command handler
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    try:
+        welcome_msg = (
+            "🙏 नमस्ते {name}! मैं Shashwat का Educational Bot हूँ।\n\n"
+            "📚 मैं आपको निम्नलिखित सुविधाएँ प्रदान करता हूँ:\n"
+            "- सभी कक्षाओं की 📘 पुस्तकें और 📄 नोट्स\n"
+            "- परीक्षा 📑 पेपर्स और 🧪 प्रैक्टिस टेस्ट\n"
+            "- 🗣️ अंग्रेजी बोलने का प्रशिक्षण\n"
+            "- और भी बहुत कुछ!\n\n"
+            "👇 नीचे दिए गए मेनू से अपना विकल्प चुनें"
+        ).format(name=message.from_user.first_name)
+        
+        bot.send_message(
+            message.chat.id,
+            welcome_msg,
+            reply_markup=create_menu_keyboard()
+        )
+        logger.info(f"Sent welcome message to {message.from_user.id}")
+    except Exception as e:
+        logger.error(f"Error in send_welcome: {e}")
+        bot.reply_to(message, "⚠️ कुछ त्रुटि हुई। कृपया पुनः प्रयास करें।")
+
+# Help command handler
+@bot.message_handler(commands=['help'])
+@bot.message_handler(func=lambda msg: msg.text == "🆘 Help")
+def send_help(message):
+    help_text = (
+        "🆘 सहायता केंद्र:\n\n"
+        "📌 मैं आपको निम्नलिखित सेवाएँ प्रदान करता हूँ:\n"
+        "- शैक्षिक संसाधन डाउनलोड\n"
+        "- ऑनलाइन टेस्ट और क्विज\n"
+        "- अंग्रेजी सीखने के संसाधन\n\n"
+        "🔹 उपयोग करने के लिए मेनू बटन का प्रयोग करें या निम्न कमांड टाइप करें:\n"
+        "/start - बॉट पुनः आरंभ करें\n"
+        "/help - सहायता देखें\n"
+        "/about - बॉट के बारे में जानकारी\n\n"
+        "समस्या होने पर संपर्क करें: support@example.com"
+    )
+    bot.send_message(message.chat.id, help_text)
+
+# About command handler
+@bot.message_handler(commands=['about'])
+@bot.message_handler(func=lambda msg: msg.text == "ℹ️ About Bot")
+def send_about(message):
+    about_text = (
+        "ℹ️ बॉट के बारे में:\n\n"
+        "📚 Shashwat Educational Bot\n"
+        "संस्करण: 2.0\n"
+        "अंतिम अपडेट: 30 मई 2024\n\n"
+        "यह बॉट छात्रों को निःशुल्क शैक्षिक संसाधन प्रदान करता है।\n\n"
+        "विकसितकर्ता: Shashwat\n"
+        "संपर्क: contact@example.com"
+    )
+    bot.send_message(message.chat.id, about_text)
+
+# PDF Resources handler
+@bot.message_handler(func=lambda msg: msg.text == "📚 PDF Resources")
+def send_pdf_resources(message):
+    try:
+        response = "📚 PDF संसाधन:\n\n"
+        for name, url in RESOURCES["pdf"].items():
+            response += f"🔹 {name}: {url}\n"
+        
+        response += "\n⬆️ उपरोक्त लिंक पर क्लिक करके संसाधन डाउनलोड करें।"
+        
+        # Add inline buttons for quick access
+        markup = types.InlineKeyboardMarkup()
+        for name, url in RESOURCES["pdf"].items():
+            markup.add(types.InlineKeyboardButton(text=name, url=url))
+        
+        bot.send_message(
+            message.chat.id,
+            response,
+            reply_markup=markup,
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.error(f"Error in send_pdf_resources: {e}")
+        bot.reply_to(message, "⚠️ PDF संसाधन लोड करने में त्रुटि। कृपया बाद में पुनः प्रयास करें।")
+
+# Tests handler
+@bot.message_handler(func=lambda msg: msg.text == "🧪 Tests & Quizzes")
+def send_tests(message):
+    try:
+        response = "🧪 परीक्षण और क्विज़:\n\n"
+        for name, url in RESOURCES["tests"].items():
+            response += f"✅ {name}: {url}\n"
+        
+        # Add inline buttons
+        markup = types.InlineKeyboardMarkup()
+        for name, url in RESOURCES["tests"].items():
+            markup.add(types.InlineKeyboardButton(text=name, url=url))
+        
+        bot.send_message(
+            message.chat.id,
+            response,
+            reply_markup=markup,
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.error(f"Error in send_tests: {e}")
+        bot.reply_to(message, "⚠️ टेस्ट लोड करने में त्रुटि। कृपया बाद में पुनः प्रयास करें।")
+
+# English Speaking handler
+@bot.message_handler(func=lambda msg: msg.text == "🗣️ English Speaking")
+def send_english_resources(message):
+    try:
+        response = "🗣️ अंग्रेजी सीखने के संसाधन:\n\n"
+        for name, url in RESOURCES["english"].items():
+            response += f"📌 {name}: {url}\n"
+        
+        # Add inline buttons
+        markup = types.InlineKeyboardMarkup()
+        for name, url in RESOURCES["english"].items():
+            markup.add(types.InlineKeyboardButton(text=name, url=url))
+        
+        bot.send_message(
+            message.chat.id,
+            response,
+            reply_markup=markup,
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.error(f"Error in send_english_resources: {e}")
+        bot.reply_to(message, "⚠️ अंग्रेजी संसाधन लोड करने में त्रुटि।")
+
+# Website handler
+@bot.message_handler(func=lambda msg: msg.text == "🌐 Visit Website")
+def send_website(message):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("🌐 वेबसाइट खोलें", url=RESOURCES["website"]))
+    bot.send_message(
+        message.chat.id,
+        "हमारी वेबसाइट पर जाएँ:",
+        reply_markup=markup
+    )
+
+# Default handler for unknown messages
 @bot.message_handler(func=lambda message: True)
-def reply_all(message):
-    if message.text == "📚 PDF Resources":
-        bot.send_message(message.chat.id,
-            "📥 Direct Download Links:\n\n"
-            "🔹 UP Board Class 6 to 12 Book and paper and more :https://boardexam.netlify.app/up_board/up_board_all_page\n"
-            "🔹 CBSE Class 6 to 12 Notes: https://boardexam.netlify.app/cbsc_bord/cbsc_board_all_page\n"
-            "🔹 All IMPORTANT PAGE: https://boardexam.netlify.app/all-link-site\n"
-            "🔹 Graduation COURSE : https://boardexam.netlify.app/graduation/graduation\n"
-            "➕ और भी: https://yourwebsite.com/downloads"
-        )
+def handle_unknown(message):
+    bot.reply_to(
+        message,
+        "❌ मैं इस कमांड को नहीं समझ पाया।\n\n"
+        "कृपया मेनू से कोई विकल्प चुनें या /help टाइप करें।",
+        reply_markup=create_menu_keyboard()
+    )
 
-    elif message.text == "🧪 Test & Quiz":
-        bot.send_message(message.chat.id,
-            "🧪 टेस्ट लिंक:\n\n"
-            "✅ JEE MCQ: https://boardexam.netlify.app/jee&neet/jee_test\n"
-            "✅ NEET Quiz: https://boardexam.netlify.app/jee&neet/neet_test\n"
-            "✅ ITI Practice Test: https://boardexam.netlify.app/iti/iti_page\n"
-            "✅ Merchant Navy: https://boardexam.netlify.app/marchant_navi/navi.%20all%20topic.html"
-        )
+# Error handler
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    try:
+        bot.answer_callback_query(call.id, "Processing your request...")
+    except Exception as e:
+        logger.error(f"Error in callback: {e}")
 
-    elif message.text == "🗣️ English Speaking":
-        bot.send_message(message.chat.id,
-            "🗣️ Spoken English Content:\n\n"
-            "📖 Grammar Guide: https://boardexam.netlify.app/english_speacking.html/english-main\n"
-            "🎧 Speaking Practice: https://boardexam.netlify.app/english_speacking.html/english-main\n"
-            "📥 PDF Course: https://boardexam.netlify.app/english_speacking.html/english-main"
-        )
-
-    elif message.text == "🌐 Visit Website":
-        bot.send_message(message.chat.id, "🌐 Visit करें: https://boardexam.netlify.app/")
-
-    else:
-        bot.send_message(message.chat.id, "कृपया Menu से कोई विकल्प चुनें।")
-
-# Run the bot
-print("🤖 Bot चालू हो चुका है...")
-bot.polling()
+# Start the bot
+if __name__ == "__main__":
+    logger.info("🤖 बॉट सक्रिय हो रहा है...")
+    try:
+        bot.polling(none_stop=True)
+    except Exception as e:
+        logger.error(f"Bot crashed: {e}")
